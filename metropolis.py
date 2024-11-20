@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.stats import gaussian_kde as gkde
-from scipy.stats import norm
+from scipy.stats import norm, uniform, loggamma
 
 def generate_random_dist():
     data=np.random.randn(30) #random sampling of data
@@ -44,6 +44,8 @@ def metropolis(start,samples):
 
     for i in range(samples):
 
+        s = f"{x} --> "
+
         x1 = generate_candidate(x)
 
         acceptance = generate_acceptance(x,x1)
@@ -53,10 +55,14 @@ def metropolis(start,samples):
         if(cs):
             x=x1
 
+        plt.plot(x, norm.pdf(x,50,25), 'x')
+        
+        print(f"{s}{x} : acceptance = {acceptance} : change? {cs} : count = {count}")
         count+=1
         r.append(x)
-
-    return r
+    
+    burn_in= int(0.25* len(r))
+    return r[burn_in:]
 
 
 def main():
@@ -64,12 +70,14 @@ def main():
     x=np.linspace(50-75, 50+75,100)
 
     start=norm.pdf(x,50,25)*4 #our starting normal distribution
-    goal=norm.pdf(x,50,25)*2 #goal, unknown to algorithm
+    goal=norm.pdf(x,50,25)  #goal, unknown to algorithm
+
+    goal/=np.trapezoid(goal,x)
     
     met=metropolis(start,samples=10000)
-
-    plt.plot(goal)
+    
     plt.hist(met, bins=30, density=True)
+    plt.plot(goal)
     plt.plot(start)
     plt.show()
 
