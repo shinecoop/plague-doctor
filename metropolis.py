@@ -3,22 +3,17 @@ import matplotlib.pyplot as plt
 from scipy.stats import gaussian_kde as gkde
 from scipy.stats import norm, uniform, loggamma
 
-def generate_random_dist():
-    data=np.random.randn(30) #random sampling of data
-
-    kde=gkde(data) #generating a distribution function using kde algorithm
-
-    xs = np.linspace(min(data)-1, max(data) +1, 100) 
-    r = kde(xs)
-
-    return r/np.trapezoid(r) #turning distribution function into array of values i can plot
+def f(x):
+    if x >= 1:
+        return np.exp(-(x-1)/2) + np.exp(-(x-1)**2)
+    else:
+        return np.exp((x-1)/3) + np.exp((x-1)**3)
 
 def generate_candidate(x):
-    return np.random.normal(x, 8) #draws a random candidate from a normal distribution centered at previous state
+    return np.random.normal(x,1)    
 
 def generate_acceptance(x,x1):
-
-    rf = norm.pdf(x1,50,25)/norm.pdf(x,50,25)
+    rf = f(x1)/f(x)
     #rg=0 # for asymmetric candidate distributions
 
     return min(1,rf)
@@ -30,13 +25,13 @@ def change_states(acceptance):
         return True
     return False
 
-def metropolis(start,samples):
+def metropolis(samples):
 
     count=0
     r=[]
 
-    #use mean of starting distribution as initial state
-    x=50
+    x=0 #starting state
+
     #1. generate random candidate based on previous state
     #2. check acceptance probability
     #3. move/not move states
@@ -48,38 +43,53 @@ def metropolis(start,samples):
 
         x1 = generate_candidate(x)
 
-        acceptance = generate_acceptance(x,x1)
+        acceptance = generate_acceptance(x,x1,)
 
         cs = change_states(acceptance)
 
         if(cs):
             x=x1
-
-        plt.plot(x, norm.pdf(x,50,25), 'x')
-        
+ 
         print(f"{s}{x} : acceptance = {acceptance} : change? {cs} : count = {count}")
         count+=1
         r.append(x)
     
-    burn_in= int(0.25* len(r))
+    burn_in = int(0.1*len(r))
     return r[burn_in:]
 
 
 def main():
     
-    x=np.linspace(50-75, 50+75,100)
+    #draw target distributions
+    x_vals = np.arange(-20,20,.01) 
+    y_vals = [f(x) for x in x_vals] #f values
 
-    start=norm.pdf(x,50,25)*4 #our starting normal distribution
-    goal=norm.pdf(x,50,25)  #goal, unknown to algorithm
+    #values used for verification in the future 
+    NORM_CONST = 7.16556
+    TRUE_MEAN = 1.94709 / NORM_CONST
 
-    goal/=np.trapezoid(goal,x)
+    p_vals = [f(x)/NORM_CONST for x in x_vals] #pi values
+
+    plt.plot(x_vals, y_vals, color="red")
+    plt.plot(x_vals, p_vals, color="blue")
     
-    met=metropolis(start,samples=10000)
-    
-    plt.hist(met, bins=30, density=True)
-    plt.plot(goal)
-    plt.plot(start)
+    #plot setup
+    plt.xlabel('x', fontsize=20)
+    plt.ylabel('density', fontsize=20)
+    plt.legend(['f(x)','PI(x)'], fontsize=20)
+
+    #metropolis that hoe
+    met=metropolis(samples=100000)
+    plt.hist(met, bins=200, density=True)
+
+    #verification
+    plt.title(f"Expected Mean: {round(TRUE_MEAN,3)} \n Mean We Got:{round(np.mean(met),3)}")
+
+
     plt.show()
+
+
+
 
 if __name__ == "__main__":
 
